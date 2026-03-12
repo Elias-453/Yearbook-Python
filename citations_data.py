@@ -1,0 +1,31 @@
+citations_files = {
+"69227": "output/citations/69227.txt",
+"69224" :"output/citations/69224.txt",
+"69073" :"output/citations/69073.txt",
+"68407" :"output/citations/68407.txt",
+"67597" :"output/citations/67597.txt",
+"67554":"output/citations/67554.txt",
+"67452":"output/citations/67452.txt",
+"67382":"output/citations/67382.txt",
+"67339":"output/citations/67339.txt",
+"66280":"output/citations/66280.txt",
+"66240":"output/citations/66240.txt",
+"65955":"output/citations/65955.txt",
+"65918":"output/citations/65918.txt",
+"65781":"output/citations/65781.txt",
+"65280":"output/citations/65280.txt",
+"64462":"output/citations/64462.txt",
+"64413":"output/citations/64413.txt",
+"63837":"output/citations/63837.txt",
+"63490":"output/citations/63490.txt",
+"63068":"output/citations/63068.txt",
+"62924":"output/citations/62924.txt",
+"62807":"output/citations/62807.txt",
+"62562":"output/citations/62562.txt",
+"61076":"output/citations/61076.txt",
+"61068":"output/citations/61068.txt",
+"61001":"output/citations/61001.txt",
+
+}
+
+

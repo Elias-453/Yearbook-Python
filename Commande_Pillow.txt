@@ -1,0 +1,426 @@
+Structure du PROJET YEARBOOK : 
+
+Fichiers Python indispensable pour le bon fonctionnement du code :
+
+- yearbook_generator.py (page de code principale)
+
+- eleves_data.py ( dictionnaire des élèves)
+
+- image_data.py ( les images)
+
+- citations_data.py (les citations)
+
+Dossier output :
+
+output/images/ → contient les portraits, la photo de classe, les médailles
+output/citations/ → contient les fichiers .txt avec les citations
+
+Dossier ressources :
+SUPINFO_LOGO_QUADRI.png (le logo utilisé pour la page de garde)
+
+Police utilisée :
+StoryScript-Regular.ttf
+
+Résultat final :
+
+page_garde.png
+photoClasse.png
+yearbook_page_1.png, yearbook_page_2.png, etc.
+yearbook_final.pdf
+
+
+-----------------------------------------------------------------------------------------------------------
+
+
+1) controle des Images
+
+J'ai appris plusieurs commandes sur Pillow grace à plusieurs vidéos Youtube comme (ex:Apprendre Python Facilement-ep18:la bibliothéque PIL du "Le Grand Manitou"  / Python Tutorial : Image Manipulation with Pillow du "Corey Shafer")
+
+- Image.open(path) permet de charger un image pour ouvrir une photo.
+-Image.resize((w,y),method) permet de redimensionner une image et l'ajuster dans ma page.
+-img.convert("L") convertit des pixel en couleur et noir/blanc.
+-Image.new("RGB", (w, h), "white") me permet d'ouvrir une page vierge base de tout mes pages.
+-img.save sauvegarde une image sois en PNG ou jpeg quand j'utilise img.save(filename)
+
+
+2) Texte
+
+
+ImageDraw.Draw(img)`  Crée un objet pour dessiner  
+draw.text((x, y) , cela permet d'affiche du texte comme citation ou le nom de personnage
+draw.textlength permet de mesurer largeur du texte ca peut etre utile pour centrer le texte
+draw.textbbox((x, y) utile pour la hauteur de ligne |
+
+3)FONT
+
+
+ImageFont.truetype() permet de mettre en place une font qu on peut varier selon le type de font dans notre dossier .
+ImageFont.load_default() c la police de défaut que j ai finalement change pour respecter la consigne.
+
+4) Effets (icone, cadre)
+
+
+ImageOps.expand(img, border=10, fill="black")` m a permis de mettre en place un cadre sur mes photo plus precisement des bordures noir je peux varier l epaisseur avec la valeur dans border.
+
+img.paste(source, (x, y), mask)` m a permis de mettre un image sur un autre comme pour mes icones de medaille sur le cadre d une image de delegue ou sous delegue.
+
+5) Structures de Données
+
+
+
+eleves_data.py(Dictionnaire)
+{
+    "65280": {
+        "prenom": "Harry",
+        "nom": "Potter",
+        "delegue": 2,      # 0=non, 1=adjoint, 2=principal
+        "floutage": False  # True si l'élève veut être flouté
+    }
+}
+
+ 
+Image & images_paths(Liste)
+
+
+[
+    "output/images/69227.jpeg",
+    "output/images/69224.jpeg",
+    
+]
+
+
+Dictionnaire `citations_dict`
+
+{
+"69227": "output/citations/69227.txt",
+"69224" :"output/citations/69224.txt",
+}
+
+
+Choix de l'orientation avec image (26) + citations attribué
+   - Portrait : 3×3 photos (9 par page), format 1880×2000
+   - Paysage : 5×2 photos (10 par page), format 2430×1320
+
+
+box_blur(image, rayon)
+
+Son Rôle est d'Appliquer un floutage aux images décrit par le dictionnaire .
+ca detecte chaque pixel de l’image.
+puis calcule la moyenne de la couleur des pixels voisins.
+Et ca remplace le pixel original par cette moyenne.
+
+- image: L'image PIL à flouter
+- rayon : Intensité du flou 
+
+Algorithme de floutage :
+ Parcourt chaque pixel de l'image
+ Pour chaque pixel, calcule la moyenne des pixels voisins dans un carré de taille (2×rayon+1)
+ Remplace le pixel par cette moyenne
+ Répète pour les 3 canaux RGB
+
+
+Calcul de position des photos :
+
+col = (index % nombre_colonnes)
+row = (index // nombre_colonnes)
+x = start_x + col × (largeur_photo + espacement)
+y = start_y + row × (hauteur_photo + espacement)
+
+-------------------------------------------------------------------------------------------------------------
+
+Explication et role de mes fonctions : 
+
+1) Importation 
+
+from PIL import ImageFilter, Image, ImageDraw, ImageFont, ImageOps
+import math, os
+from eleves_data import eleves
+from image_data import images_paths
+from citations_data import citations_files
+ 
+PIL :  manipuler des images (ouvrir, écrire du texte, redimensionne)
+
+math : pour faire des calculs (nombre de pages)
+
+os : pour gérer les fichiers et chemins
+
+Mes propres fichiers Python :
+
+eleves_data.py : contient les infos sur les élèves
+
+image_data.py : contient les chemins des photos
+
+citations_data.py : contient les fichiers de citation
+
+2) Fonction pertinente expliqué
+
+a) ecrire_texte_multiligne()
+
+Cette fonction affiche un texte sur une image, en le découpant automatiquement sur plusieurs lignes si la phrase est trop longue.
+
+Elle sépare le texte mot par mot et essaie d’ajouter les mots sur une même ligne sans dépasser une largeur maximale (largeur_max).
+Lorsque  ça dépasse, elle crée une nouvelle ligne et enfin ca centre chaque ligne 
+
+
+b) creer_page_garde()
+
+Cela me sert d afficher une page blanche puis de charger dessus le LOGO Supinfo et le redimensionner.
+Par la suite, j'écris le titre et le sous-titre au centre.
+Enfin je sauvegarde le tout sous page_garde.png.
+
+c) page_sup_classe()
+
+Meme principe que pour la fonction ci-dessus. ils doivent tout les 2 etre sous format A4 ici l image doit remplir la page sous format paysage.
+
+D) def creer_pages_yearbook(images, dictionnaire_citations) : Fonction Majeur (explication détaillé)
+
+Cette fonction sert à générer automatiquement toutes les pages du yearbook  à partir :
+
+- la  liste d’images d’élèves 
+- un dictionnaire de citations associées à chaque élève (dictionnaire_citations)
+-Cela crée une page avec plusieurs photos, noms et citations par élève, puis enregistre chaque page sous forme d’image (yearbook_page_1.png, yearbook_page_2.png).
+
+Grace à mon input je permets à l'utilisateur de choisir entre le format  portrait (1) ou paysage(tout autre nbr reel)
+-choix = input(" Entre 1 pour Portrait ou nimporte quel nbr réel pour Paysage : ").strip()
+
+Calcule pour portrait ou paysage :
+Je calcule la zone totale occupée par les images pour pouvoir centrer tout le bloc :
+
+largeur_yn = colonnes * largeur_img + (colonnes - 1) * espacement
+hauteur_yn = rangées * (hauteur_img + marge_texte + 40) + (rangées - 1) * espacement
+départ_x = (largeur - largeur_yn) // 2
+départ_y = (hauteur - hauteur_yn) // 2
+
+Le calcul (largeur - largeur_yn) // 2 sert à centrer le bloc de photos horizontalement et verticalement.
+
+Pour le font :
+
+try:
+    font = ImageFont.truetype("StoryScript-Regular.ttf", 23)
+except:
+    font = ImageFont.load_default()
+
+Style de font récupéré dans https://fonts.google.com/selection.
+
+Pour calculer le nombre de page pouvant contenir mes images .
+
+étudiants_par_page = colonnes * rangées
+nombre_pages = math.ceil(len(images) / étudiants_par_page)
+
+Cela permet de savoir combien d’élèves par page, puis combien de pages il faut pour tous les caser.
+math.ceil() permet d’arrondir vers le haut .
+
+Boucle de création de feuille blanche :
+
+for numéro_page in range(nombre_pages):
+    page = Image.new("RGB", (largeur, hauteur), "white")
+    draw = ImageDraw.Draw(page)
+
+
+Placement des élèves:
+
+début = numéro_page * étudiants_par_page
+fin = min(début + étudiants_par_page, len(images))
+
+Je détermine la portion de la liste images qui appartient à cette page (par exemple élèves 0–8 pour la page 1, 9–17 pour la page 2).
+
+Ensuite, y a une boucle sur ces élèves :
+
+for i in range(début, fin):
+
+
+Calcul de la position (colonne, rangée): 
+
+colonne = (i - début) % colonnes
+rangé = (i - début) // colonnes
+x = départ_x + colonne * (largeur_img + espacement)
+y = départ_y + rangé * (hauteur_img + espacement)
+
+Ces formules permettent de savoir où placer chaque photo sur la grille.
+
+
+Chargement et préparation de l’image de l’élève :
+
+img = Image.open(images[i]).resize((largeur_img, hauteur_img))
+identifiant_image = os.path.splitext(os.path.basename(images[i]))[0]
+cela ouvre une image et recupere son ID à partir du nom du  fichier
+
+informations = eleves.get(identifiant_image)
+c est important pour relier les info dans mon dictionnaire eleves_data.py comme le floutage ou non , delegue et prénom et nom.
+
+Floutage d'éléve :
+
+Selon mon dictionnaire , certain eleves doivent etre flouter :
+if floutage:
+    img = box_blur(img, rayon=4)
+cadre_noir_image = ImageOps.expand(img, border=bordure, fill="black")
+page.paste(cadre_noir_image, (x, y))
+
+
+Cadrage de la font centrer en dessous de l image : 
+
+nom_complet = f"{informations['prenom']} {informations['nom']}"
+largeur_nom = draw.textlength(nom_complet, font=font)
+position_x_centrée = x + (largeur_img - largeur_nom) // 2
+draw.text((position_x_centrée, y + hauteur_img + marge_texte), nom_complet, fill="black", font=font)
+
+Calcule de la largeur du texte pour que je centre le nom et prenom en dessous de l image.
+
+Citation :
+
+citation = dictionnaire_citations.get(identifiant_image, "(erreurr)")
+ecrire_texte_multiligne(draw, citation, (x, y + hauteur_img + marge_texte + 40), font, largeur_img)
+
+Cela detecte la citation correspondant à cet élève grâce à son ID.
+Si ce n est pas le cas , cela ecrit  “(erreur)”.
+
+
+Enregistrement de la page:
+
+fichier = f"yearbook_page_{numéro_page+1}.png"
+page.save(fichier)
+pages.append(page)
+print(f"Page enregistré : {fichier}")
+
+
+Quand la page est complète, tu la sauvegardes dans un fichier image et tu l’ajoutes à ta liste pages.
+La liste pages:
+pages = []
+une liste initialement vide mais lorsque mes pages vont se charger et se termine je poursuis avec : 
+
+fichier = f"yearbook_page_{numéro_page+1}.png"
+page.save(fichier)
+pages.append(page)
+
+page est un objet Image (créé avec Image.new()) représentant une page entière du yearbook ;
+
+.save(fichier) l’enregistre comme image PNG sur ton disque ;
+
+pages.append(page) ajoute cet objet à ta liste pages.
+
+enfin il y a :
+
+-return pages
+
+Je renvoie cette liste à celui qui appelle la fonction, pour qu’il puisse :
+les manipuler (par exemple les afficher à l’écran), ou les transformer en PDF.
+
+
+E) Bloc principal (if __name__ == "__main__":)
+
+C’est la séquence de production complète :
+
+Création la page de garde , la photo de classe.
+Charge les citations depuis leurs fichiers .txt.
+Génère les pages du yearbook (portrait/paysage).
+Convertit ces pages en noir et blanc.
+Assemble tout ça dans un PDF final complet (yearbook_final.pdf).
+
+F) sauvegarder_pdf()
+
+Assemble toutes les pages en un seul fichier PDF.
+Rassemble la page de garde, la photo de classe et les pages générées.
+Les convertit en format compatible PDF.
+Les fusionne toutes en un seul document final.
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+Le redimensionnement de mes images:
+
+
+Pour ajuster les images d’élèves dans le yearbook, avec :
+
+img = Image.open(images[i]).resize((largeur_img, hauteur_img))
+
+
+Pour adapter le logo ou la photo de classe à la taille de la page, avec un ratio dynamique :
+
+ratio = max(largeur / img.width, hauteur / img.height)
+nouvelle_taille = (int(img.width * ratio), int(img.height * ratio))
+img = img.resize(nouvelle_taille, Image.BICUBIC)
+
+
+Étape 1 : ouvrir l’image
+
+Image.open(path) charge l’image depuis le disque et enregistre ses dimensions (largeur/hauteur).
+
+Étape 2 : calcul du ratio de redimensionnement
+
+Le ratio est calculé pour que l’image remplisse bien la page ou la zone attribuée :
+
+ratio = max(largeur / img.width, hauteur / img.height)
+
+
+Si l’image est trop large ,elle est réduite.
+
+Si elle est trop petite  ,elle est agrandie.
+
+Ca garde les proportions pour ne pas la déformer.
+
+Étape 3 : création d’une nouvelle taille
+
+nouvelle_taille = (int(img.width * ratio), int(img.height * ratio))
+
+
+multiplie les dimensions d’origine par le ratio calculé.
+
+Étape 4 : redimensionnement réel
+img = img.resize(nouvelle_taille, Image.BICUBIC)
+
+
+Le mode BICUBIC applique une interpolation douce entre les pixels, pour obtenir un bonne qualité d image 
+Cela calcule une moyenne  des pixels voisins :
+résultat plus fluide
+
+
+Pour  box_blur détail des calcules : 
+
+def box_blur(image, rayon=3):
+    pixels = image.load()
+    largeur, hauteur = image.size
+    resultat = Image.new("RGB", (largeur, hauteur))
+    pixels_resultat = resultat.load()
+
+    for y in range(hauteur):
+        for x in range(largeur):
+            total_r = total_g = total_b = 0
+            compteur = 0
+            for dy in range(-rayon, rayon + 1):
+                for dx in range(-rayon, rayon + 1):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < largeur and 0 <= ny < hauteur:
+                        r, g, b = pixels[nx, ny]
+                        total_r += r
+                        total_g += g
+                        total_b += b
+                        compteur += 1
+            pixels_resultat[x, y] = (
+                total_r // compteur,
+                total_g // compteur,
+                total_b // compteur
+            )
+    return resultat
+
+Étape 1 : récupérer les pixels
+-pixels = image.load() permet d’accéder à chaque pixel individuellement
+
+Étape 2 : parcourir tous les pixels
+
+-Les deux boucles for y in range(hauteur) et for x in range(largeur) cherche les pixel un par un .
+Pour chaque pixel (x, y), on prend tous les pixels voisins dans un carré de côté 2*rayon + 1
+
+Étape 4 : calculer la moyenne des couleurs
+
+On additionne les composantes R, G, B (couleur) de tous les pixels voisins :
+
+total_r += r
+total_g += g
+total_b += b
+compteur += 1
+Puis on divise par compteur pour obtenir la couleur moyenne.
+
+Le pixel central devient cette moyenne :
+pixels_resultat[x, y] = (total_r // compteur, total_g // compteur, total_b // compteur)
+ce qui donne un effet flou car chaque pixel devient la moyenne de ses voisins.
+
+(Aide sur openclassroom / connaissance doué en informatique)

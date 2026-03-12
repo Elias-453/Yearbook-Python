@@ -1,0 +1,526 @@
+ORAL PYTHON 
+
+# 📸 Générateur Automatique de Yearbook
+## Projet Python - SUPINFO Paris Bachelor 1
+### Année académique 2025-2026
+
+**Présenté par :** [Votre nom]
+
+---
+
+# 📑 Sommaire
+
+1. **Contextualisation du projet**
+   - Objectifs et enjeux
+   - Technologies utilisées
+   - Architecture générale
+
+2. **Points techniques majeurs du code**
+   - Structures de données
+   - Algorithme de floutage
+   - Génération des pages
+   - Centrage du texte
+
+3.  Difficultés rencontrées
+   - Problèmes techniques
+   - Solutions apportées
+
+4.   Extensions possibles
+   - Améliorations du code
+   - Évolutions thématiques
+
+---
+
+# 🎯 Contexte : Problématique
+
+## Le besoin
+
+**Objectif :** Créer un yearbook digital pour une promotion de 26 élèves du Bachelor 1 SUPINFO Paris.
+
+**Contraintes :**
+- Automatiser la création (pas de Photoshop manuel)
+- Respect de la vie privée (floutage sur demande)
+- Mise en valeur des délégués (médailles)
+- Format professionnel (PDF haute qualité)
+- Gestion de citations personnalisées
+
+**Solution :** Développement d'un générateur Python automatique utilisant la bibliothèque Pillow (PIL)
+
+---
+
+# 🎯 Contexte : Technologies & Architecture
+
+## Technologies choisies
+
+**Python 3** + **Pillow (PIL)** pour :
+- Manipulation d'images (ouverture, redimensionnement, effets)
+- Écriture de texte avec polices personnalisées
+- Export multi-formats (PNG, JPEG, PDF)
+
+## Architecture du projet
+
+```
+📦 Projet Yearbook
+├── 📄 yearbook_generator.py    # Code principal
+├── 📄 eleves_data.py           # Dict élèves (infos, floutage, rôles)
+├── 📄 image_data.py            # Liste des chemins d'images
+├── 📄 citations_data.py        # Dict ID → fichier citation
+├── 📂 output/images/           # 26 portraits + médailles
+├── 📂 output/citations/        # 26 fichiers .txt
+└── 📂 ressources/              # Logo SUPINFO + police
+```
+
+---
+
+# 🎯 Contexte : Workflow & Résultat
+
+## Processus de génération
+
+```
+Input                    Traitement              Output
+┌────────────┐          ┌──────────┐           ┌──────────────┐
+│ 26 photos  │──────────│  Python  │──────────▶│ Page de garde│
+│26 citations│   +      │  Pillow  │           │ Photo classe │
+│Infos élèves│──────────│   PIL    │──────────▶│ 3 pages (×2) │
+└────────────┘          └──────────┘           │   couleur +  │
+     ▲                       │                  │ noir & blanc │
+     │                       ▼                  └──────────────┘
+     │                  Choix format                   │
+     │              Portrait ou Paysage                ▼
+     │                  3×3 ou 5×2              ┌──────────────┐
+     └──────────────────────────────────────────│yearbook.pdf  │
+                                                │  (8 pages)   │
+                                                └──────────────┘
+```
+
+**Formats supportés :**
+- Portrait : 1880×2000 px (3×3 = 9 élèves/page)
+- Paysage : 2430×1320 px (5×2 = 10 élèves/page)
+
+---
+
+# 💻 Point Technique 1 : Structures de Données
+
+## Organisation des données élèves
+
+**Dictionnaire principal (eleves_data.py) :**
+```python
+{
+    "65280": {
+        "prenom": "Harry",
+        "nom": "Potter",
+        "delegue": 2,      # 0=aucun, 1=adjoint, 2=principal
+        "floutage": False  # Demande de protection vie privée
+    }
+}
+```
+
+**Pourquoi un dictionnaire ?**
+- ✅ Accès direct par ID : `eleves.get("65280")`
+- ✅ Pas de problème d'ordre
+- ✅ Facile à maintenir et modifier
+
+**Association ID ↔ Citation :**
+```python
+citations_dict = {"65280": "output/citations/65280.txt", ...}
+citation = citations_dict.get(id_image, "(erreur)")
+```
+
+**Extraction de l'ID depuis le nom de fichier :**
+```python
+id_image = os.path.splitext(os.path.basename("output/images/65280.jpeg"))[0]
+# Résultat : "65280"
+```
+
+---
+
+# 💻 Point Technique 2 : Algorithme de Floutage
+
+## box_blur() - Protection de la vie privée
+
+**Principe du Box Blur :**
+
+Pour chaque pixel de l'image :
+1. Sélectionner un carré de pixels voisins (rayon = 4)
+2. Calculer la moyenne RGB de ces pixels
+3. Remplacer le pixel central par cette moyenne
+
+**Implémentation :**
+```python
+def box_blur(image, rayon=3):
+    for y in range(hauteur):
+        for x in range(largeur):
+            total_r = total_g = total_b = 0
+            compteur = 0
+            
+            # Parcourir les voisins
+            for dy in range(-rayon, rayon + 1):
+                for dx in range(-rayon, rayon + 1):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < largeur and 0 <= ny < hauteur:
+                        r, g, b = pixels[nx, ny]
+                        total_r += r
+                        total_g += g
+                        total_b += b
+                        compteur += 1
+            
+            # Appliquer la moyenne
+            pixels_resultat[x, y] = (
+                total_r // compteur,
+                total_g // compteur,
+                total_b // compteur
+            )
+```
+
+**Complexité :** O(largeur × hauteur × rayon²)
+
+---
+
+# 💻 Point Technique 3 : Génération des Pages
+
+## creer_pages_yearbook() - Fonction centrale
+
+**Étape 1 : Configuration selon format**
+```python
+choix = input("Entre 1 pour Portrait ou autre pour Paysage : ")
+
+if choix == "1":  # Portrait
+    largeur, hauteur = 1880, 2000
+    largeur_img, hauteur_img = 320, 384
+    colonnes, rangées = 3, 3
+else:  # Paysage
+    largeur, hauteur = 2430, 1320
+    largeur_img, hauteur_img = 256, 384
+    colonnes, rangées = 5, 2
+```
+
+**Étape 2 : Calcul du nombre de pages**
+```python
+étudiants_par_page = colonnes × rangées  # 9 ou 10
+nombre_pages = math.ceil(26 / étudiants_par_page)  # 3 pages
+```
+
+**Étape 3 : Centrage du bloc de photos**
+```python
+largeur_totale = colonnes × largeur_img + (colonnes - 1) × espacement
+départ_x = (largeur - largeur_totale) // 2  # Centrage horizontal
+départ_y = (hauteur - hauteur_totale) // 2  # Centrage vertical
+```
+
+---
+
+# 💻 Point Technique 3 : Génération (suite)
+
+## Placement d'un élève sur la grille
+
+**Calcul de position :**
+```python
+for i in range(début, fin):
+    # Position dans la grille
+    colonne = (i - début) % colonnes
+    rangée = (i - début) // colonnes
+    
+    # Coordonnées pixel
+    x = départ_x + colonne × (largeur_img + espacement)
+    y = départ_y + rangée × (hauteur_img + espacement)
+```
+
+**Traitement de l'élève :**
+```python
+# 1. Charger et redimensionner l'image
+img = Image.open(images[i]).resize((largeur_img, hauteur_img))
+
+# 2. Récupérer les infos par ID
+id_image = os.path.splitext(os.path.basename(images[i]))[0]
+informations = eleves.get(id_image)
+
+# 3. Appliquer le floutage si demandé
+if informations.get("floutage", False):
+    img = box_blur(img, rayon=4)
+
+# 4. Ajouter bordure noire
+cadre_noir_image = ImageOps.expand(img, border=bordure, fill="black")
+page.paste(cadre_noir_image, (x, y))
+```
+
+---
+
+# 💻 Point Technique 4 : Centrage du Texte
+
+## Problème : Texte décalé à gauche
+
+**Avant (texte à gauche) :**
+```python
+draw.text((x, y), nom_complet, font=font)
+```
+
+**Solution : Calcul de la position centrée**
+```python
+# 1. Mesurer la largeur du texte
+largeur_nom = draw.textlength(nom_complet, font=font)
+
+# 2. Calculer le décalage pour centrer
+position_x_centrée = x + (largeur_img - largeur_nom) // 2
+
+# 3. Afficher le texte centré
+draw.text((position_x_centrée, y + hauteur_img + marge_texte), 
+          nom_complet, fill="black", font=font)
+```
+
+**Pour les citations multi-lignes :**
+```python
+def ecrire_texte_multiligne(draw, texte, position, font, largeur_max):
+    # Découpe en lignes + centre chaque ligne individuellement
+    for ligne in lignes:
+        largeur_ligne = draw.textlength(ligne, font=font)
+        x_centre_ligne = x + (largeur_max - largeur_ligne) // 2
+        draw.text((x_centre_ligne, y), ligne, font=font)
+        y += hauteur_ligne + espacement
+```
+
+---
+
+# 💻 Point Technique 5 : Médailles des Délégués
+
+## Superposition d'images avec transparence
+
+**Problème :** Ajouter une médaille sur l'image sans cacher la photo
+
+**Solution : Utilisation du masque alpha**
+```python
+if informations.get("delegue") == 2:  # Délégué principal
+    # Charger la médaille d'or (avec transparence)
+    icone_médaillon = Image.open("medaille-dor.png").convert("RGBA")
+    icone_médaillon = icone_médaillon.resize((60, 60))
+    
+    # Coller avec le canal alpha comme masque
+    page.paste(icone_médaillon, 
+               (x + largeur_img - 30, y - 30),  # Coin haut-droit
+               icone_médaillon)  # 3ème arg = masque de transparence
+
+elif informations.get("delegue") == 1:  # Délégué adjoint
+    icone_médaillon = Image.open("medaille-dargent.png").convert("RGBA")
+    # ... même processus
+```
+
+**Le canal alpha (RGBA) permet :**
+- Transparence partielle
+- Pas de fond blanc disgracieux
+- Superposition naturelle
+
+---
+
+# 💻 Point Technique 6 : Redimensionnement Adaptatif
+
+## Deux stratégies selon le besoin
+
+**Cas 1 : Photos élèves (taille fixe)**
+```python
+img.resize((largeur_img, hauteur_img))
+```
+→ Redimensionnement direct, peut déformer légèrement
+
+**Cas 2 : Logo/Photo classe (proportionnel)**
+```python
+# Calculer le ratio pour remplir la page
+ratio = max(largeur_cible / img.width, hauteur_cible / img.height)
+
+# Nouvelles dimensions proportionnelles
+nouvelle_largeur = int(img.width × ratio)
+nouvelle_hauteur = int(img.height × ratio)
+
+# Redimensionner avec interpolation BICUBIC (qualité)
+img = img.resize((nouvelle_largeur, nouvelle_hauteur), Image.BICUBIC)
+```
+
+**Pourquoi BICUBIC ?**
+- Interpolation cubique entre pixels
+- Qualité supérieure (vs NEAREST ou BILINEAR)
+- Évite l'effet pixelisé
+
+---
+
+# 🚧 Difficultés Rencontrées
+
+## Défi 1 : Association ID ↔ Citation
+
+**Problème initial :**
+```python
+citations = []  # Liste simple
+for path in citations_files.values():
+    citations.append(lire_fichier(path))
+
+citation = citations[i]  # ❌ Ordre des fichiers ≠ ordre des images
+```
+
+**Solution :**
+```python
+citations_dict = {}  # Dictionnaire par ID
+for id_eleve, path in citations_files.items():
+    citations_dict[id_eleve] = lire_fichier(path)
+
+citation = citations_dict.get(id_image)  # ✅ Accès par ID
+```
+
+---
+
+# 🚧 Difficultés Rencontrées (suite)
+
+## Défi 2 : Centrage du texte
+
+**Problème :** Pas de méthode native `draw.text_centered()`
+
+**Solution :** Calcul manuel de la largeur avec `textlength()` puis décalage
+
+## Défi 3 : Performance du floutage
+
+**Problème :** 3 boucles imbriquées → lent sur grandes images
+
+**Solution :** 
+- Limiter le rayon à 4 (bon compromis qualité/vitesse)
+- Possibilité d'utiliser `ImageFilter.BoxBlur()` (natif, plus rapide)
+
+## Défi 4 : Gestion des erreurs
+
+**Problème :** Image manquante, citation absente...
+
+**Solution :**
+```python
+try:
+    img = Image.open(images[i])
+except:
+    print(f"Image introuvable : {images[i]}")
+    continue  # Passe à l'élève suivant
+```
+
+---
+
+# 🚀 Extensions Possibles : Code
+
+## Améliorations techniques
+
+**1. Interface graphique (Tkinter/PyQt)**
+```python
+# Au lieu de input() en console
+Interface visuelle :
+- Sélection fichiers par clic
+- Prévisualisation temps réel
+- Barre de progression
+```
+
+**2. Optimisation du floutage**
+```python
+# Utiliser le filtre natif (5-10× plus rapide)
+from PIL import ImageFilter
+img_floue = img.filter(ImageFilter.BoxBlur(rayon=4))
+```
+
+**3. Import automatique depuis Excel**
+```python
+import pandas as pd
+eleves = pd.read_excel("eleves.xlsx").to_dict()
+```
+
+**4. Personnalisation avancée**
+- Choix de couleurs (thème personnalisé)
+- Plusieurs polices selon sections
+- Marges/espacements configurables
+- Format A4/A3/Letter...
+
+---
+
+# 🚀 Extensions Possibles : Thématique
+
+## Évolutions du concept Yearbook
+
+**1. Version interactive web**
+- Galerie HTML/CSS/JavaScript
+- Filtres dynamiques (recherche élève, délégués...)
+- Partage sur réseaux sociaux
+- QR code par élève vers profil
+
+**2. Statistiques et data viz**
+```python
+import matplotlib.pyplot as plt
+# Graphiques : âge moyen, répartition genre, 
+# origines géographiques, spécialités...
+```
+
+**3. Timeline événements**
+- Frise chronologique de l'année
+- Photos événements (soirées, sorties, projets)
+- Anecdotes marquantes
+
+**4. Versions multimédia**
+- Vidéo montage avec musique
+- Portfolio digital (site one-page)
+- Application mobile (Android/iOS)
+
+---
+
+# 🚀 Extensions Possibles : Thématique (suite)
+
+## Élargissement à d'autres domaines
+
+**1. Album de famille**
+- Arbres généalogiques automatiques
+- Chronologie naissances/mariages
+- Cartes géographiques origines
+
+**2. Catalogue produits**
+- E-commerce : génération automatique de fiches
+- Restaurants : menus visuels
+- Immobilier : plaquettes biens
+
+**3. Rapports d'entreprise**
+- Trombinoscope employés
+- Organigrammes visuels
+- Bilans annuels illustrés
+
+**4. Éducation**
+- Manuels scolaires personnalisés
+- Certificats/diplômes en masse
+- Carnets de stage automatisés
+
+---
+
+# ✅ Conclusion
+
+## Bilan du projet
+
+**Objectifs atteints :**
+- ✅ Automatisation complète (0 manipulation manuelle)
+- ✅ 26 élèves traités avec infos personnalisées
+- ✅ Respect vie privée (floutage) et hiérarchie (médailles)
+- ✅ Export professionnel PDF 8 pages
+
+**Compétences développées :**
+- Manipulation d'images en Python (Pillow/PIL)
+- Algorithmique (floutage, positionnement 2D)
+- Gestion de structures de données complexes
+- Résolution de problèmes techniques
+
+**Chiffres clés :**
+- 📄 ~300 lignes de code Python
+- 🖼️ 26 images traitées
+- 📝 26 citations intégrées
+- ⏱️ Temps d'exécution : ~5-10 secondes
+
+---
+
+# 💬 Questions ?
+
+## Merci de votre attention !
+
+**Démonstration disponible**
+- Code source complet
+- Résultat PDF final
+- Explications techniques approfondies
+
+📧 Contact : [votre email]
+🔗 GitHub : [lien repo si applicable]
+
+---
+
+**SUPINFO Paris - Bachelor 1**
+**Projet Python - Année 2025-2026**

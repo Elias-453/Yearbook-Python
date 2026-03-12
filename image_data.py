@@ -1,0 +1,30 @@
+images_paths = [
+        "output/images/69227.jpeg",
+        "output/images/69224.jpeg",
+        "output/images/69073.jpeg",
+        "output/images/68407.jpeg",
+        "output/images/67597.jpeg",
+        "output/images/67554.jpeg",
+        "output/images/67452.jpeg",
+        "output/images/67382.jpeg",
+        "output/images/67339.jpeg",
+        "output/images/66280.jpeg",
+        "output/images/66240.jpeg",
+        "output/images/65955.jpeg",
+        "output/images/65918.jpeg",
+        "output/images/65781.jpeg",
+        "output/images/65280.jpeg",
+        "output/images/64462.jpeg",
+        "output/images/64413.jpeg",
+        "output/images/63837.jpeg",
+        "output/images/63490.jpeg",
+        "output/images/63068.jpeg",
+        "output/images/62924.jpeg",
+        "output/images/62807.jpeg",
+        "output/images/62562.jpeg",
+        "output/images/61001.jpeg",
+        "output/images/61068.jpeg",
+        "output/images/61076.jpeg"
+    
+    ]
+
